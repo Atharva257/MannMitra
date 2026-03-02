@@ -1,0 +1,61 @@
+# =========================
+# Logs
+# =========================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =========================
+# Dependencies
+# =========================
+node_modules/
+
+# =========================
+# Build Output
+# =========================
+dist/
+dist-ssr/
+build/
+
+# =========================
+# Environment Files
+# =========================
+.env
+.env.local
+.env.development.local
+.env.production.local
+
+# =========================
+# Local Config Files
+# =========================
+*.local
+
+# =========================
+# Vite Cache
+# =========================
+.vite/
+
+# =========================
+# Editor Files
+# =========================
+.vscode/*
+!.vscode/extensions.json
+
+.idea/
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Temp Files
+# =========================
+*.tmp
+*.temp
+*.swp

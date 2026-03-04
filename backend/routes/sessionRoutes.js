@@ -1,13 +1,14 @@
-const express = require("express");
+import express from "express";
+import Session from "../models/Session.js";
+import { protect, requireRole } from "../middleware/authMiddleware.js";
+import { v4 as uuidv4 } from "uuid";
+
 const router = express.Router();
-const Session = require("../models/Session");
-const { verifyToken, requireRole } = require("../middleware/authMiddleware");
-const { v4: uuidv4 } = require("uuid");
 
 // ADMIN - Schedule Session
 router.post(
   "/schedule",
-  verifyToken,
+  protect,
   requireRole("admin"),
   async (req, res) => {
     try {
@@ -36,7 +37,7 @@ router.post(
 // STUDENT - Get My Sessions
 router.get(
   "/student",
-  verifyToken,
+  protect,
   requireRole("student"),
   async (req, res) => {
     try {
@@ -54,7 +55,7 @@ router.get(
 // MENTOR - Get My Sessions
 router.get(
   "/mentor",
-  verifyToken,
+  protect,
   requireRole("mentor"),
   async (req, res) => {
     try {
@@ -69,4 +70,24 @@ router.get(
   }
 );
 
-module.exports = router;
+// GET Active Session (Student or Mentor)
+router.get(
+  "/active",
+  protect,
+  async (req, res) => {
+    try {
+      const query = req.user.role === "mentor" ? { mentor: req.user.id } : { student: req.user.id };
+      const session = await Session.findOne({
+        ...query,
+        status: "scheduled"
+      }).sort({ scheduledAt: 1 });
+
+      if (!session) return res.status(404).json({ message: "No active session found" });
+      res.json(session);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+export default router;

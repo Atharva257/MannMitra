@@ -15,31 +15,38 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminRegister from "./pages/AdminRegister";
 import MentorSession from "./pages/MentorSession";
 import StudentSession from "./pages/StudentSession";
+import RBTGame from "./pages/RBTGame";
+import TherapyModules from "./pages/TherapyModules";
+import ABCDEGame from "./pages/ABCDEGame";
+import ModuleDetail from "./pages/ModuleDetail";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 function App() {
   const [auth, setAuth] = useState(false);
   const [role, setRole] = useState(null);
 
-useEffect(() => {
-  const updateAuth = () => {
-    const token = localStorage.getItem("token");
-    const user = JSON.parse(localStorage.getItem("user"));
-    setAuth(!!token);
-    setRole(user?.role || null);
-  };
+  useEffect(() => {
+    const updateAuth = () => {
+      const token = localStorage.getItem("token");
+      const user = JSON.parse(localStorage.getItem("user"));
+      setAuth(!!token);
+      setRole(user?.role || null);
+    };
 
-  // Initial check + auto-refresh whenever route changes
-  updateAuth();
-  window.addEventListener("authChange", updateAuth);
+    // Initial check + auto-refresh whenever route changes
+    updateAuth();
+    window.addEventListener("authChange", updateAuth);
 
-  // Also re-check auth when user navigates between pages
-  window.addEventListener("popstate", updateAuth);
+    // Also re-check auth when user navigates between pages
+    window.addEventListener("popstate", updateAuth);
 
-  return () => {
-    window.removeEventListener("authChange", updateAuth);
-    window.removeEventListener("popstate", updateAuth);
-  };
-}, []);
+    return () => {
+      window.removeEventListener("authChange", updateAuth);
+      window.removeEventListener("popstate", updateAuth);
+    };
+  }, []);
 
 
 
@@ -85,7 +92,14 @@ useEffect(() => {
             {/* Video Session Routes */}
             <Route path="/mentor/session" element={<MentorSession />} />
             <Route path="/student/session" element={<StudentSession />} />
-            
+            <Route path="/rbt-game" element={<RBTGame />} />
+            <Route path="/rbt-abcde" element={<ABCDEGame />} />
+            <Route path="/therapy-modules" element={<TherapyModules />} />
+            <Route path="/modules/:id" element={<ModuleDetail />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+
           </Routes>
         </div>
       </div>

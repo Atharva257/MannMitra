@@ -32,13 +32,15 @@ import User from "../models/User.js";
 import Assessment from "../models/Assessment.js";
 import CrisisLog from "../models/CrisisLog.js";
 import Appointment from "../models/Appointment.js";
-import Mentor from "../models/Mentor.js"; // new model
+import Session from "../models/Session.js";
+import { v4 as uuidv4 } from "uuid";
+import Mentor from "../models/Mentor.js";
 import protect from "../middleware/authMiddleware.js";
 import adminOnly from "../middleware/adminMiddleware.js";
 
 const router = express.Router();
 
-// ✅ Existing
+// Existing
 router.get("/users", protect, adminOnly, async (req, res) => {
   const users = await User.find().select("-password");
   res.json(users);
@@ -54,7 +56,7 @@ router.get("/crisis", protect, adminOnly, async (req, res) => {
   res.json(logs);
 });
 
-// ✅ NEW ROUTES
+// NEW ROUTES
 
 // Get single student by ID
 router.get("/students/:id", protect, adminOnly, async (req, res) => {
@@ -101,13 +103,62 @@ router.put("/students/:id/assign-mentor", protect, adminOnly, async (req, res) =
 // Schedule appointment
 router.post("/students/:id/appointments", protect, adminOnly, async (req, res) => {
   const { mentorId, date } = req.body;
+
+  // Create Appointment (Legacy/Tracking)
   const appt = await Appointment.create({
     student: req.params.id,
     mentor: mentorId,
     date,
     status: "scheduled",
   });
+
+  // Create Video Session with unique Room ID
+  // Find the User ID for this Mentor ID
+  const mentorRecord = await Mentor.findById(mentorId);
+  const mentorUser = await User.findOne({ email: mentorRecord?.email });
+
+  if (mentorUser) {
+    await Session.create({
+      student: req.params.id,
+      mentor: mentorUser._id, // Correctly ref the User model
+      scheduledAt: date,
+      meetingRoomId: `mm-${uuidv4().slice(0, 8)}`,
+    });
+  }
+
   res.status(201).json(appt);
+});
+
+// NEW: Admin Dashboard Stats
+router.get("/stats", protect, adminOnly, async (req, res) => {
+  try {
+    const [studentCount, mentorCount, pendingAssessments] = await Promise.all([
+      User.countDocuments({ role: "student" }),
+      User.countDocuments({ role: "mentor" }),
+      User.countDocuments({ role: "student", assessmentCompleted: false }),
+    ]);
+
+    res.json({
+      totalStudents: studentCount,
+      totalMentors: mentorCount,
+      pendingAssessments,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// NEW: Allotment Logs
+router.get("/allotments", protect, adminOnly, async (req, res) => {
+  try {
+    const students = await User.find({ role: "student", mentor: { $ne: null } })
+      .select("name email mentor")
+      .populate("mentor", "name specialization");
+
+    res.json(students);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 export default router;

@@ -19,11 +19,22 @@ const protect = async (req, res, next) => {
 };
 
 const adminOnly = (req, res, next) => {
-  if (req.user && req.user.roles === "admin") {
+  if (req.user && req.user.role === "admin") {
     next();
   } else {
     res.status(403).json({ message: "Admin access only" });
   }
 };
 
+const requireRole = (role) => {
+  return (req, res, next) => {
+    if (req.user && req.user.role === role) {
+      next();
+    } else {
+      res.status(403).json({ message: `Access denied: requires ${role} role` });
+    }
+  };
+};
+
+export { protect, adminOnly, requireRole };
 export default protect;

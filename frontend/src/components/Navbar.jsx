@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import NotificationBell from "./NotificationBell";
 
 function Navbar({ auth, setAuth, role }) {
   const handleLogout = () => {
@@ -38,12 +39,15 @@ function Navbar({ auth, setAuth, role }) {
             <Link to="/login" className="bg-blue-600 text-white px-3 py-1 rounded-lg">Login</Link>
           </>
         ) : (
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 text-white px-3 py-1 rounded-lg"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-4">
+            <NotificationBell />
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 text-white px-3 py-1 rounded-lg"
+            >
+              Logout
+            </button>
+          </div>
         )}
       </div>
     </nav>

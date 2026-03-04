@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 
-const socket = io("http://localhost:5000");
+const socket = io(window.location.protocol + "//" + window.location.hostname + ":5000");
 
 function VideoChat({ roomId, userName }) {
   const localVideoRef = useRef(null);

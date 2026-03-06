@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import API from "../services/api";
 import { phq9Questions } from "../data/phq9";
 import CrisisModal from "../components/CrisisModal";
 
@@ -19,43 +19,27 @@ function Assessment() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // 1️⃣ Calculate score & severity
-      const score = answers.reduce((acc, curr) => acc + (curr ?? 0), 0);
-      let severity = "Minimal";
-      if (score >= 5 && score <= 9) severity = "Mild";
-      else if (score >= 10 && score <= 14) severity = "Moderate";
-      else if (score >= 15 && score <= 19) severity = "Moderately Severe";
-      else if (score >= 20) severity = "Severe";
+      // Send assessment to backend
+      const { data } = await API.post("/assessments", { answers });
 
-      setResult({ score, severity });
+      setResult({ score: data.score, severity: data.severity });
 
-      // 2️⃣ Crisis alert check
-      if (score >= 15 || answers[8] > 0) {
+      // Crisis alert check
+      if (data.score >= 15 || answers[8] > 0) {
         setShowCrisis(true);
       }
 
-      // 3️⃣ Save to backend: mark assessment complete
-      await axios.put(
-        "http://localhost:5000/api/users/complete-assessment",
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      // 4️⃣ Update localStorage
+      // Update localStorage
       const user = JSON.parse(localStorage.getItem("user"));
       if (user) {
         user.assessmentCompleted = true;
         localStorage.setItem("user", JSON.stringify(user));
       }
 
-      // 5️⃣ Redirect to dashboard after short delay
+      // Redirect to dashboard after short delay
       setTimeout(() => {
         navigate("/dashboard", { replace: true });
-      }, 2000);
+      }, 2500);
     } catch (err) {
       alert("Error submitting assessment");
       console.error(err);

@@ -1,5 +1,7 @@
 import Assessment from "../models/Assessment.js";
+import User from "../models/User.js";
 import CrisisLog from "../models/CrisisLog.js";
+import { allotMentorToStudent } from "../services/allotmentService.js";
 
 // Helper to calculate score + severity
 const calculateScore = (answers) => {
@@ -35,6 +37,10 @@ export const submitAssessment = async (req, res) => {
       score,
       severity,
     });
+
+    // Update User Status & Allot Mentor
+    await User.findByIdAndUpdate(req.user._id, { assessmentCompleted: true });
+    await allotMentorToStudent(req.user._id);
 
     res.json({ score, severity, assessment });
   } catch (error) {

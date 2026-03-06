@@ -2,7 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import http from "http";
-import { Server } from "socket.io";   
+import { Server } from "socket.io";
 import connectDB from "./config/db.js";
 import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 import { initSessionSocket } from "./socket/sessionSocket.js";

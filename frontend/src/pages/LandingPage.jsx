@@ -6,7 +6,7 @@ function LandingPage() {
       {/* Hero Section */}
       <header className="flex-1 flex flex-col items-center justify-center text-center px-6">
         <img
-          src="public/MannMitra.png"
+          src="/MannMitra.png"
           alt="MannMitra Logo"
           className="w-20 h-20 mb-4"
         />
@@ -76,7 +76,7 @@ function LandingPage() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between px-6">
           <div className="flex items-center gap-2 mb-4 md:mb-0">
             <img
-              src="public/MannMitra.png"
+              src="/MannMitra.png"
               alt="Logo"
               className="w-6 h-6"
             />

@@ -15,15 +15,12 @@ export const registerAdmin = async (req, res) => {
     const adminExists = await User.findOne({ email, role: "admin" });
     if (adminExists) return res.status(400).json({ message: "Admin already exists" });
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
     const admin = await User.create({
       name,
       email,
-      password: hashedPassword,
+      password, // Hook handles hashing
       role: "admin",
-      firstLogin: false, 
+      firstLogin: false,
       assessmentCompleted: true,
     });
 

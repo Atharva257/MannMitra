@@ -27,11 +27,17 @@ function MoodTracker() {
     { icon: <Cloud size={30} />, label: "Stressed", color: "text-gray-500" },
   ];
 
-  // 📊 Fetch last 7 days moods
+  // Fetch last 7 days moods
   const fetchHistory = async () => {
     try {
       const { data } = await API.get("/moods/history");
       setHistory(data);
+
+      // If today's mood (last entry) is already set, update state
+      const todayMood = data[data.length - 1];
+      if (todayMood && todayMood.mood) {
+        setMood(todayMood.mood);
+      }
     } catch (err) {
       console.error("Error fetching mood history", err);
     }
@@ -41,29 +47,37 @@ function MoodTracker() {
     fetchHistory();
   }, []);
 
-  // ✅ Save today's mood
+  // Save today's mood
   const handleMoodSelect = async (selectedMood) => {
+    if (mood) return; // Prevent selection if already set
+
     try {
       setMood(selectedMood);
       await API.post("/moods", { mood: selectedMood });
       fetchHistory();
     } catch (err) {
       console.error("Error saving mood", err);
+      // Reset if failed
+      setMood(null);
     }
   };
 
-  // 🧠 Prepare data for chart
+  // Prepare data for chart
   const chartData = {
-    labels: history.map((m) => new Date(m.createdAt).toLocaleDateString()),
+    labels: history.map((m) => {
+      const d = new Date(m.createdAt);
+      return isNaN(d) ? "N/A" : d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
+    }),
     datasets: [
       {
         label: "Mood Trend",
         data: history.map((m) =>
-          ["Happy", "Calm", "Neutral", "Sad", "Stressed"].indexOf(m.mood) + 1
+          m.mood ? ["Happy", "Calm", "Neutral", "Sad", "Stressed"].indexOf(m.mood) + 1 : null
         ),
         borderColor: "#14b8a6",
         tension: 0.3,
         fill: false,
+        spanGaps: true,
       },
     ],
   };
@@ -84,7 +98,7 @@ function MoodTracker() {
   return (
     <div className="bg-white shadow-lg rounded-2xl p-6 mb-8">
       <h3 className="text-xl font-semibold text-teal-700 mb-4">
-        How are you feeling today?
+        {mood ? "Your mood for today is set 🌿" : "How are you feeling today?"}
       </h3>
 
       {/* Emoji Mood Selector */}
@@ -93,20 +107,21 @@ function MoodTracker() {
           <button
             key={idx}
             onClick={() => handleMoodSelect(m.label)}
-            className={`flex flex-col items-center transition-transform hover:scale-110 ${
-              mood === m.label ? "opacity-100" : "opacity-70"
-            }`}
+            disabled={!!mood}
+            className={`flex flex-col items-center transition-transform ${!mood ? "hover:scale-110" : "cursor-not-allowed"
+              } ${mood === m.label ? "opacity-100 scale-110" : "opacity-40"
+              }`}
           >
             <div className={`text-4xl ${m.color}`}>{m.icon}</div>
-            <span className="text-sm mt-1">{m.label}</span>
+            <span className="text-sm mt-1 font-medium">{m.label}</span>
           </button>
         ))}
       </div>
 
       {mood && (
-        <p className="text-center text-gray-600 mb-6">
-          You’re feeling{" "}
-          <span className="font-semibold text-teal-600">{mood}</span> today 🌿
+        <p className="text-center text-gray-500 mb-6 italic">
+          You logged your feeling as <span className="font-bold text-teal-600">{mood}</span>.
+          Selection is locked for today.
         </p>
       )}
 

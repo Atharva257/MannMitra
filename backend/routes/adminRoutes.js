@@ -1,32 +1,3 @@
-// import express from "express";
-// import User from "../models/User.js";
-// import Assessment from "../models/Assessment.js";
-// import CrisisLog from "../models/CrisisLog.js";
-// import protect from "../middleware/authMiddleware.js";
-// import adminOnly from "../middleware/adminMiddleware.js";
-
-// const router = express.Router();
-
-// // Get all users
-// router.get("/users", protect, adminOnly, async (req, res) => {
-//   const users = await User.find().select("-password");
-//   res.json(users);
-// });
-
-// // Get all assessments
-// router.get("/assessments", protect, adminOnly, async (req, res) => {
-//   const assessments = await Assessment.find().populate("user", "name email");
-//   res.json(assessments);
-// });
-
-// // Get crisis logs
-// router.get("/crisis", protect, adminOnly, async (req, res) => {
-//   const logs = await CrisisLog.find().populate("user", "name email");
-//   res.json(logs);
-// });
-
-// export default router;
-
 import express from "express";
 import User from "../models/User.js";
 import Assessment from "../models/Assessment.js";
@@ -56,7 +27,55 @@ router.get("/crisis", protect, adminOnly, async (req, res) => {
   res.json(logs);
 });
 
+import bcrypt from "bcryptjs";
+
+// ... existing code ...
+
 // NEW ROUTES
+
+// Register a new mentor (Admin only)
+router.post("/mentors", protect, adminOnly, async (req, res) => {
+  try {
+    const { name, email, password, specialization } = req.body;
+
+    // Check if user already exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: "User with this email already exists" });
+    }
+
+    // 1. Create User record
+    const user = await User.create({
+      name,
+      email,
+      password, // Hook will handle hashing
+      role: "mentor",
+      firstLogin: false, // Mentors don't necessarily need the "first login" flow like students
+      assessmentCompleted: true,
+    });
+
+    // 2. Create Mentor record
+    const mentor = await Mentor.create({
+      name,
+      email,
+      specialization,
+      approved: true, // Auto-approved since admin created them
+    });
+
+    res.status(201).json({
+      message: "Mentor registered successfully",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      mentor,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // Get single student by ID
 router.get("/students/:id", protect, adminOnly, async (req, res) => {

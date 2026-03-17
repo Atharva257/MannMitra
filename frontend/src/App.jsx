@@ -10,9 +10,9 @@ import Dashboard from "./pages/Dashboard";
 import Chatbot from "./pages/Chatbot";
 import TrustedContact from "./pages/TrustedContact";
 import AdminDashboard from "./pages/AdminDashboard";
+import MentorDashboard from "./pages/MentorDashboard";
 import LandingPage from "./pages/LandingPage";
 import AdminLogin from "./pages/AdminLogin";
-import AdminRegister from "./pages/AdminRegister";
 import MentorSession from "./pages/MentorSession";
 import StudentSession from "./pages/StudentSession";
 import RBTGame from "./pages/RBTGame";
@@ -78,16 +78,18 @@ function App() {
             />
             <Route
               path="/contacts"
-              element={auth && role === "student" ? <TrustedContact /> : <Navigate to="/login" />}
+              element={auth ? <TrustedContact /> : <Navigate to="/login" />}
             />
 
             {/* Admin-only routes */}
             <Route
               path="/admin"
-              element={auth && role === "admin" ? <AdminDashboard /> : <Navigate to="/admin/login" />}
+              element={auth && role === "admin" ? <AdminDashboard /> : <Navigate to="/admin-login" />}
             />
-
-            <Route path="/admin/register" element={<AdminRegister />} />
+            <Route
+              path="/mentor-dashboard"
+              element={auth && role === "mentor" ? <MentorDashboard /> : <Navigate to="/login" />}
+            />
 
             {/* Video Session Routes */}
             <Route path="/mentor/session" element={<MentorSession />} />

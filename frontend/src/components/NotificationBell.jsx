@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
 import API from "../services/api";
 
 function NotificationBell() {
     const [notifications, setNotifications] = useState([]);
     const [show, setShow] = useState(false);
+    const bellRef = useRef(null);
 
     const fetchNotifications = async () => {
         try {
@@ -18,18 +19,36 @@ function NotificationBell() {
     useEffect(() => {
         fetchNotifications();
         const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
-        return () => clearInterval(interval);
+
+        // Close on escape key or click outside
+        const handleClickOutside = (event) => {
+            if (bellRef.current && !bellRef.current.contains(event.target)) {
+                setShow(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
     }, []);
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     const markAsRead = async (id) => {
-        await API.put(`/notifications/${id}/read`);
-        fetchNotifications();
+        try {
+            await API.put(`/notifications/${id}/read`);
+            fetchNotifications();
+            // Optional: close dropdown on click if desired, keeping it for now to show other unread
+            // setShow(false); 
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     return (
-        <div className="relative">
+        <div className="relative" ref={bellRef}>
             <button onClick={() => setShow(!show)} className="relative p-2 text-gray-600 hover:text-blue-600 transition">
                 <Bell size={24} />
                 {unreadCount > 0 && (

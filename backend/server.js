@@ -1,5 +1,7 @@
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
 import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
@@ -10,7 +12,6 @@ import moodRoutes from "./routes/moodRoutes.js";
 import quotesRoutes from "./routes/quoteRoutes.js";
 import sessionRoutes from "./routes/sessionRoutes.js";
 
-dotenv.config();
 connectDB();
 
 const app = express();

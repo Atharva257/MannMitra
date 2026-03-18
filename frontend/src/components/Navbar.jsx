@@ -18,19 +18,22 @@ function Navbar({ auth, setAuth, role }) {
       </div>
 
       <div className="flex gap-4 text-blue-600 items-center">
-        <a href="/">Home</a>
+        {!auth && <a href="/">Home</a>}
 
         {auth && role === "student" && (
           <>
             <Link to="/assessment">Assessment</Link>
-            <Link to="/chat">Chat</Link>
-            <Link to="/contacts">Contacts</Link>
+            <Link to="/contacts">Emergency Contacts</Link>
             <Link to="/dashboard">Dashboard</Link>
           </>
         )}
 
-        {auth && role === "admin" && (
-          <Link to="/admin">Admin Dashboard</Link>
+        {auth && (role === "admin" || role === "mentor") && (
+          <>
+            <Link to="/contacts">Emergency Contacts</Link>
+            {role === "admin" && <Link to="/admin">Admin Dashboard</Link>}
+            {role === "mentor" && <Link to="/mentor-dashboard">Mentor Dashboard</Link>}
+          </>
         )}
 
         {!auth ? (

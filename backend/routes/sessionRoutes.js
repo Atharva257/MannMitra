@@ -2,6 +2,8 @@ import express from "express";
 import Session from "../models/Session.js";
 import { protect, requireRole } from "../middleware/authMiddleware.js";
 import { v4 as uuidv4 } from "uuid";
+import { createMeeting } from "../services/googleCalendarService.js";
+import User from "../models/User.js";
 
 const router = express.Router();
 
@@ -14,12 +16,22 @@ router.post(
     try {
       const { studentId, mentorId, scheduledAt, duration } = req.body;
 
+      const student = await User.findById(studentId);
+      const mentor = await User.findById(mentorId);
+
+      const { link, eventId } = await createMeeting(
+        `Session: ${student?.name || 'Student'} & ${mentor?.name || 'Mentor'}`,
+        scheduledAt,
+        duration || 30
+      );
+
       const session = new Session({
         student: studentId,
         mentor: mentorId,
         scheduledAt,
         duration,
-        meetingRoomId: uuidv4(),
+        meetingLink: link,
+        calendarEventId: eventId,
       });
 
       await session.save();
@@ -79,7 +91,8 @@ router.get(
       const query = req.user.role === "mentor" ? { mentor: req.user.id } : { student: req.user.id };
       const session = await Session.findOne({
         ...query,
-        status: "scheduled"
+        status: "scheduled",
+        meetingLink: { $ne: null }
       }).sort({ scheduledAt: 1 });
 
       if (!session) return res.status(404).json({ message: "No active session found" });

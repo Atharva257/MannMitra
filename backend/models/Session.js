@@ -31,8 +31,15 @@ const sessionSchema = new mongoose.Schema(
         },
         
         meetingRoomId: {
-            type: String, // Unique room id for WebRTC session
-            required: true,
+            type: String, // Legacy/Custom Room ID
+        },
+
+        meetingLink: {
+            type: String, // Google Meet Link
+        },
+
+        calendarEventId: {
+            type: String, // Google Calendar Event ID
         },
         
         notes: {

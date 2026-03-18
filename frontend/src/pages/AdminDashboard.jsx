@@ -10,33 +10,36 @@ function AdminDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [trustedContacts, setTrustedContacts] = useState([]);
 
+  const [selectedMentors, setSelectedMentors] = useState({});
+
+  const fetchData = async () => {
+    try {
+      const [s, m, st, al] = await Promise.all([
+        API.get("/admin/users"),
+        API.get("/admin/mentors"),
+        API.get("/admin/stats"),
+        API.get("/admin/allotments"),
+      ]);
+      setStudents(s.data.filter(u => u.role === "student"));
+      setMentors(m.data);
+      setStats(st.data);
+      setAllotments(al.data);
+    } catch (err) {
+      console.error("Admin fetch failed", err);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [s, m, st, al] = await Promise.all([
-          API.get("/admin/users"), // Adjusted to match backend route /admin/users
-          API.get("/admin/mentors"),
-          API.get("/admin/stats"),
-          API.get("/admin/allotments"),
-        ]);
-        setStudents(s.data.filter(u => u.role === "student"));
-        setMentors(m.data);
-        setStats(st.data);
-        setAllotments(al.data);
-      } catch (err) {
-        console.error("Admin fetch failed", err);
-      }
-    };
     fetchData();
   }, []);
 
   const handleAssignMentor = async (studentId) => {
-    const mentorId = prompt("Enter Mentor ID to assign:");
-    if (!mentorId) return;
+    const mentorId = selectedMentors[studentId];
+    if (!mentorId) return alert("Please select a mentor first");
     try {
       await API.put(`/admin/students/${studentId}/assign-mentor`, { mentorId });
       alert("Mentor assigned!");
-      window.location.reload();
+      fetchData();
     } catch (err) {
       alert("Assignment failed");
     }
@@ -49,7 +52,7 @@ function AdminDashboard() {
     try {
       await API.post(`/admin/students/${studentId}/appointments`, { mentorId, date });
       alert("Appointment & Video Session Scheduled!");
-      window.location.reload();
+      fetchData();
     } catch (err) {
       alert("Scheduling failed");
     }
@@ -108,8 +111,21 @@ function AdminDashboard() {
                       Score: {s.latestScore || "0"}
                     </span>
                   </td>
-                  <td className="p-4 border-b italic text-gray-400">
-                    {s.mentor ? "Allotted" : "Pending"}
+                  <td className="p-4 border-b">
+                    {!s.mentor ? (
+                      <select
+                        className="bg-gray-50 border border-gray-200 rounded-lg p-1 text-xs"
+                        onChange={(e) => setSelectedMentors({ ...selectedMentors, [s._id]: e.target.value })}
+                        value={selectedMentors[s._id] || ""}
+                      >
+                        <option value="">Select Mentor</option>
+                        {mentors.map(m => (
+                          <option key={m._id} value={m._id}>{m.name} ({m.specialization})</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-green-600 font-medium">Allotted</span>
+                    )}
                   </td>
                   <td className="p-4 border-b text-center space-x-3">
                     <Link
@@ -138,22 +154,76 @@ function AdminDashboard() {
         </div>
       </div>
 
-      {/* Trusted Contacts Section */}
+      {/* Mentor Registration Section */}
+      <div className="bg-white rounded-2xl shadow-md p-6 mb-8 border border-blue-50">
+        <h3 className="text-lg font-semibold text-blue-600 mb-4">Register New Mentor</h3>
+        <form
+          className="grid grid-cols-1 md:grid-cols-4 gap-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            try {
+              await API.post("/admin/mentors", data);
+              alert("Mentor registered successfully!");
+              e.target.reset(); // Clear form
+              fetchData(); // Refresh list
+            } catch (err) {
+              alert(err.response?.data?.message || "Registration failed");
+            }
+          }}
+        >
+          <input name="name" placeholder="Full Name" required className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-200" />
+          <input name="email" type="email" placeholder="Email" required className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-200" />
+          <input name="password" type="password" placeholder="Password" required className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-200" />
+          <input name="specialization" placeholder="Specialization (e.g. Anxiety)" required className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-200" />
+          <button type="submit" className="md:col-span-4 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg">
+            Register Mentor
+          </button>
+        </form>
+      </div>
+
+      {/* Mentors List Section */}
       <div className="bg-white rounded-2xl shadow-md p-6 mb-8">
-        <h3 className="text-lg font-semibold text-purple-600 mb-4">
-          Trusted Contacts (Admin-managed)
-        </h3>
-        <ul className="space-y-2">
-          {trustedContacts.map((c, i) => (
-            <li key={i} className="p-3 border rounded-md flex justify-between">
-              <span>{c.name} ({c.role}) - {c.phone}</span>
-              <button className="text-red-600">Remove</button>
-            </li>
-          ))}
-        </ul>
-        <button className="mt-4 bg-green-600 text-white px-3 py-1 rounded">
-          + Add Contact
-        </button>
+        <h3 className="text-lg font-semibold text-blue-600 mb-4">Manage Mentors</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="bg-blue-50 text-left text-gray-600">
+                <th className="p-4 border-b">Name</th>
+                <th className="p-4 border-b">Email</th>
+                <th className="p-4 border-b">Specialization</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mentors.map((m, i) => (
+                <tr key={i} className="hover:bg-gray-50 transition-colors">
+                  <td className="p-4 border-b font-medium">{m.name}</td>
+                  <td className="p-4 border-b text-gray-500">{m.email}</td>
+                  <td className="p-4 border-b">{m.specialization}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Emergency Contacts Section */}
+      <div className="bg-white rounded-2xl shadow-md p-6 mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-purple-600">
+            Emergency Contacts (System-wide)
+          </h3>
+          <Link
+            to="/contacts"
+            className="text-blue-600 hover:underline font-bold text-sm"
+          >
+            Manage All Contacts →
+          </Link>
+        </div>
+        <div className="bg-blue-50 p-4 rounded-xl text-sm text-blue-800 italic">
+          Emergency contacts are static for all students and are managed globally.
+        </div>
       </div>
 
       {/* Allotment Logs */}

@@ -1,22 +1,24 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Assessment from "../models/Assessment.js";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
 export const chatReply = async (req, res) => {
   const { message } = req.body;
 
   if (!message) return res.status(400).json({ reply: "Please enter a message." });
 
   try {
+    // Initialize Gemini lazily
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
     // Fetch user's latest mood context
     const latestAssessment = await Assessment.findOne({ user: req.user._id }).sort({ createdAt: -1 });
     const moodContext = latestAssessment
       ? `The user's latest PHQ-9 score is ${latestAssessment.score} (${latestAssessment.severity} depression). Use this to be extra empathetic.`
       : "No assessment data available yet.";
 
-    // Initialize Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Initialize Gemini model
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
       You are MannMitra, a compassionate and supportive AI mental wellness companion. 

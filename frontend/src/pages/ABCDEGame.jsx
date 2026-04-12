@@ -75,7 +75,18 @@ function ABCDEGame() {
 
                     <button
                         disabled={!data[currentKey]}
-                        onClick={nextStep}
+                        onClick={() => {
+                            nextStep();
+                            if (step === 5) {
+                                API.put('/users/log-activity', { activityType: 'cbt' })
+                                    .then(res => {
+                                        if (res.data.newBadges?.length > 0) {
+                                            window.dispatchEvent(new CustomEvent('newBadgesEarned', { detail: res.data.newBadges }));
+                                        }
+                                    })
+                                    .catch(console.error);
+                            }
+                        }}
                         className="w-full py-5 bg-purple-600 text-white rounded-[1.5rem] font-bold text-xl shadow-xl hover:bg-purple-700 disabled:opacity-50 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3"
                     >
                         {step === 5 ? "Complete Analysis" : "Continue Journey"} <ArrowRight size={24} />

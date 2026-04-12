@@ -12,34 +12,53 @@ import TrustedContact from "./pages/TrustedContact";
 import AdminDashboard from "./pages/AdminDashboard";
 import MentorDashboard from "./pages/MentorDashboard";
 import LandingPage from "./pages/LandingPage";
-import AdminLogin from "./pages/AdminLogin";
 import MentorSession from "./pages/MentorSession";
 import StudentSession from "./pages/StudentSession";
 import RBTGame from "./pages/RBTGame";
 import TherapyModules from "./pages/TherapyModules";
 import ABCDEGame from "./pages/ABCDEGame";
 import ModuleDetail from "./pages/ModuleDetail";
+import BreathingBubble from "./pages/BreathingBubble";
+import MoodCanvas from "./pages/MoodCanvas";
+import GratitudeJournal from "./pages/GratitudeJournal";
+import ResourceLibrary from "./pages/ResourceLibrary";
+import Forum from "./pages/Forum";
+import BadgeGallery from "./pages/BadgeGallery";
+import BadgeCelebration from "./components/BadgeCelebration";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 function App() {
-  const [auth, setAuth] = useState(false);
-  const [role, setRole] = useState(null);
+  const [auth, setAuth] = useState(() => !!localStorage.getItem("token"));
+  const [role, setRole] = useState(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      return user?.role || null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     const updateAuth = () => {
       const token = localStorage.getItem("token");
-      const user = JSON.parse(localStorage.getItem("user"));
-      setAuth(!!token);
-      setRole(user?.role || null);
+      const userJson = localStorage.getItem("user");
+      try {
+        const user = userJson ? JSON.parse(userJson) : null;
+        console.log("Auth Update:", { hasToken: !!token, role: user?.role });
+        setAuth(!!token);
+        setRole(user?.role || null);
+      } catch (e) {
+        setAuth(false);
+        setRole(null);
+      }
+      setIsInitializing(false);
     };
 
-    // Initial check + auto-refresh whenever route changes
     updateAuth();
     window.addEventListener("authChange", updateAuth);
-
-    // Also re-check auth when user navigates between pages
     window.addEventListener("popstate", updateAuth);
 
     return () => {
@@ -48,20 +67,29 @@ function App() {
     };
   }, []);
 
-
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 border-none outline-none ring-0">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-gray-400 font-bold animate-pulse uppercase tracking-[0.3em] text-[10px]">Securing Session</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Router>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-green-50 to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-green-50 to-purple-50 dark:from-slate-900 dark:via-gray-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-300">
         <Navbar auth={auth} setAuth={setAuth} role={role} />
 
         <div className="p-6">
           <Routes>
-            {/* Public */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/library" element={<ResourceLibrary />} />
+            <Route path="/forum" element={<Forum />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login setAuth={setAuth} />} />
-            <Route path="/admin-login" element={<AdminLogin setAuth={setAuth} />} />
 
             {/* Student-only routes */}
             <Route
@@ -84,7 +112,7 @@ function App() {
             {/* Admin-only routes */}
             <Route
               path="/admin"
-              element={auth && role === "admin" ? <AdminDashboard /> : <Navigate to="/admin-login" />}
+              element={auth && role === "admin" ? <AdminDashboard /> : <Navigate to="/login" />}
             />
             <Route
               path="/mentor-dashboard"
@@ -97,13 +125,18 @@ function App() {
             <Route path="/rbt-game" element={<RBTGame />} />
             <Route path="/rbt-abcde" element={<ABCDEGame />} />
             <Route path="/therapy-modules" element={<TherapyModules />} />
+            <Route path="/modules/breathing-bubble" element={<BreathingBubble />} />
+            <Route path="/modules/mood-canvas" element={<MoodCanvas />} />
+            <Route path="/modules/gratitude-journal" element={<GratitudeJournal />} />
             <Route path="/modules/:id" element={<ModuleDetail />} />
             <Route path="/about" element={<About />} />
+            <Route path="/badges" element={<BadgeGallery />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
 
           </Routes>
         </div>
+        <BadgeCelebration />
       </div>
     </Router>
   );

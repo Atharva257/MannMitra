@@ -58,12 +58,15 @@ function Chatbot() {
     if (!textToSend.trim() || isLoading) return;
 
     const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput("");
     setIsLoading(true);
 
     try {
-      const res = await sendMessage(textToSend);
+      const chatHistory = updatedMessages.slice(-6, -1).map(m => ({ sender: m.sender, text: m.text }));
+      const res = await sendMessage(textToSend, chatHistory);
+      API.put("/users/log-activity").catch(e => console.error(e));
       const botMessage = { sender: "bot", text: res.reply, timestamp: new Date() };
       setMessages(prev => [...prev, botMessage]);
     } catch (err) {

@@ -111,13 +111,29 @@ router.get("/mentors", protect, adminOnly, async (req, res) => {
 
 // Assign mentor to student
 router.put("/students/:id/assign-mentor", protect, adminOnly, async (req, res) => {
-  const { mentorId } = req.body;
-  const student = await User.findById(req.params.id);
-  if (!student) return res.status(404).json({ message: "Student not found" });
+  try {
+    const { mentorId } = req.body;
+    const student = await User.findById(req.params.id);
+    if (!student) return res.status(404).json({ message: "Student not found" });
 
-  student.mentor = mentorId;
-  await student.save();
-  res.json({ message: "Mentor assigned successfully" });
+    // Find the corresponding User record for this mentor to ensure dashboard compatibility
+    const mentorRecord = await Mentor.findById(mentorId);
+    if (mentorRecord) {
+      const mentorUser = await User.findOne({ email: mentorRecord.email });
+      if (mentorUser) {
+        student.mentor = mentorUser._id;
+      } else {
+        student.mentor = mentorId; // Fallback to Mentor ID if no user account yet
+      }
+    } else {
+      student.mentor = mentorId;
+    }
+
+    await student.save();
+    res.json({ message: "Mentor assigned successfully", mentorId: student.mentor });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 // Schedule appointment
@@ -166,19 +182,35 @@ router.post("/students/:id/appointments", protect, adminOnly, async (req, res) =
   res.status(201).json(appt);
 });
 
+// GET all appointments (Global)
+router.get("/all-appointments", protect, adminOnly, async (req, res) => {
+  try {
+    const appointments = await Appointment.find()
+      .populate("student", "name email")
+      .populate("mentor", "name specialization");
+    res.json(appointments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // NEW: Admin Dashboard Stats
 router.get("/stats", protect, adminOnly, async (req, res) => {
   try {
-    const [studentCount, mentorCount, pendingAssessments] = await Promise.all([
+    const [studentCount, mentorCount, pendingAssessments, avgScoreResult] = await Promise.all([
       User.countDocuments({ role: "student" }),
       User.countDocuments({ role: "mentor" }),
       User.countDocuments({ role: "student", assessmentCompleted: false }),
+      Assessment.aggregate([{ $group: { _id: null, avgScore: { $avg: "$score" } } }])
     ]);
+
+    const averagePhqScore = avgScoreResult.length > 0 ? parseFloat(avgScoreResult[0].avgScore.toFixed(1)) : 0;
 
     res.json({
       totalStudents: studentCount,
       totalMentors: mentorCount,
       pendingAssessments,
+      averagePhqScore
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -190,7 +222,11 @@ router.get("/allotments", protect, adminOnly, async (req, res) => {
   try {
     const students = await User.find({ role: "student", mentor: { $ne: null } })
       .select("name email mentor")
-      .populate("mentor", "name specialization");
+      .populate({
+        path: "mentor",
+        model: "Mentor",
+        select: "name specialization"
+      });
 
     res.json(students);
   } catch (error) {

@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { checkAndAwardBadges } from "../services/badgeService.js";
 
 // Generate JWT
 const generateToken = (id) => {
@@ -68,6 +69,10 @@ export const loginUser = async (req, res) => {
       role: user.role,
       firstLogin: user.firstLogin,
       assessmentCompleted: user.assessmentCompleted,
+      currentStreak: user.currentStreak || 0,
+      lastActivityDate: user.lastActivityDate,
+      badges: user.badges || [],
+      stats: user.stats || {},
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -117,5 +122,60 @@ export const getProfile = async (req, res) => {
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const logActivity = async (req, res) => {
+  try {
+    const { activityType } = req.body; // e.g. "breathing", "journal", "canvas", "chat", "cbt"
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let streakUpdated = false;
+
+    // Initial log or consecutive day
+    if (!user.lastActivityDate) {
+      user.currentStreak = 1;
+      user.lastActivityDate = today;
+      streakUpdated = true;
+    } else {
+      const lastActivity = new Date(user.lastActivityDate);
+      lastActivity.setHours(0, 0, 0, 0);
+
+      const diffTime = today.getTime() - lastActivity.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) {
+        user.currentStreak = (user.currentStreak || 0) + 1;
+        user.lastActivityDate = today;
+        streakUpdated = true;
+      } else if (diffDays > 1) {
+        user.currentStreak = 1;
+        user.lastActivityDate = today;
+        streakUpdated = true;
+      }
+    }
+
+    // Increment specific activity stats
+    if (activityType && user.stats.hasOwnProperty(`${activityType}Count`)) {
+      user.stats[`${activityType}Count`] += 1;
+    }
+
+    // Check for new badges
+    const newBadges = await checkAndAwardBadges(user);
+
+    await user.save();
+
+    res.json({ 
+      currentStreak: user.currentStreak, 
+      streakUpdated, 
+      newBadges, 
+      stats: user.stats 
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { Brain, ArrowRight, CheckCircle } from "lucide-react";
+import API from "../services/api";
 
 function RBTGame() {
     const [step, setStep] = useState(1);
@@ -78,7 +78,16 @@ function RBTGame() {
                     />
                     <button
                         disabled={!thoughts.rational}
-                        onClick={nextStep}
+                        onClick={() => {
+                            nextStep();
+                            API.put('/users/log-activity', { activityType: 'cbt' })
+                                .then(res => {
+                                    if (res.data.newBadges?.length > 0) {
+                                        window.dispatchEvent(new CustomEvent('newBadgesEarned', { detail: res.data.newBadges }));
+                                    }
+                                })
+                                .catch(console.error);
+                        }}
                         className="w-full py-4 bg-green-600 text-white rounded-2xl font-semibold shadow-lg hover:bg-green-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                     >
                         Commit to Change <CheckCircle size={20} />

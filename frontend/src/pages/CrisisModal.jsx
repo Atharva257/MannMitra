@@ -8,7 +8,7 @@ function CrisisModal({ onClose }) {
     <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl p-6 w-[400px] relative">
         {/* Logo */}
-        <img src="public/MannMitra.png" alt="Logo" className="w-6 h-6 absolute top-4 right-4" />
+        <img src="/MannMitra.png" alt="Logo" className="w-6 h-6 absolute top-4 right-4" />
 
         <h2 className="text-xl font-bold text-red-600 mb-3">⚠️ Crisis Alert</h2>
         <p className="text-gray-700 mb-4">

@@ -7,4 +7,7 @@ const assessmentSchema = new mongoose.Schema({
   severity: { type: String, required: true },
 }, { timestamps: true });
 
+// Index for fast dashboard history retrieval
+assessmentSchema.index({ user: 1, createdAt: -1 });
+
 export default mongoose.model("Assessment", assessmentSchema);

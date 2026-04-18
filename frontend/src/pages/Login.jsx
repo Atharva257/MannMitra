@@ -18,6 +18,8 @@ function Login({ setAuth }) {
     if (storedUser?.token) {
       if (storedUser.role === "admin") {
         navigate("/admin");
+      } else if (storedUser.role === "mentor") {
+        navigate("/mentor-dashboard");
       } else if (storedUser.firstLogin || !storedUser.assessmentCompleted) {
         navigate("/assessment");
       } else {
@@ -53,14 +55,24 @@ function Login({ setAuth }) {
       // ✅ Redirect with React Router
       if (data.role === "admin") {
         navigate("/admin", { replace: true });
+      } else if (data.role === "mentor") {
+        navigate("/mentor-dashboard", { replace: true });
       } else if (data.firstLogin === true || data.assessmentCompleted === false) {
         navigate("/assessment", { replace: true });
       } else {
         navigate("/dashboard", { replace: true });
       }
     } catch (err) {
-      setMsg(err.response?.data?.message || "Invalid credentials. Please try again.");
-      setMsgType("error");
+      if (err.response?.status === 403 && err.response?.data?.unverified) {
+        setMsg("Please verify your email before logging in.");
+        setMsgType("error");
+        setTimeout(() => {
+          navigate("/verify-email", { state: { email: form.email } });
+        }, 2000);
+      } else {
+        setMsg(err.response?.data?.message || "Invalid credentials. Please try again.");
+        setMsgType("error");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -157,11 +169,10 @@ function Login({ setAuth }) {
         {/* Message */}
         {msg && (
           <p
-            className={`mt-6 p-3 rounded-xl text-center text-sm font-medium ${
-              msgType === "success"
-                ? "bg-emerald-100/70 text-emerald-700"
-                : "bg-red-100/70 text-red-700"
-            }`}
+            className={`mt-6 p-3 rounded-xl text-center text-sm font-medium ${msgType === "success"
+              ? "bg-emerald-100/70 text-emerald-700"
+              : "bg-red-100/70 text-red-700"
+              }`}
           >
             {msg}
           </p>

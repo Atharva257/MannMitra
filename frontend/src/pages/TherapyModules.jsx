@@ -7,13 +7,38 @@ function TherapyModules() {
     const [modules, setModules] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const interactiveModules = [
+        {
+            _id: 'breathing-bubble',
+            category: 'Stress Relief',
+            title: 'Breathing Bubble',
+            description: 'Guided box breathing exercise to calm your mind and regulate your nervous system instantly.',
+            isInteractive: true
+        },
+        {
+            _id: 'mood-canvas',
+            category: 'Creative Expression',
+            title: 'Mood Canvas',
+            description: 'Draw and express how you feel visually. A relaxing space to let your emotions flow onto the canvas.',
+            isInteractive: true
+        },
+        {
+            _id: 'gratitude-journal',
+            category: 'Daily Habit',
+            title: 'Gratitude Journal',
+            description: 'Focus on the positive aspects of your day. Track your daily gratitude streak and build resilience.',
+            isInteractive: true
+        }
+    ];
+
     useEffect(() => {
         const fetchModules = async () => {
             try {
                 const { data } = await API.get("/modules");
-                setModules(data);
+                setModules([...interactiveModules, ...data]);
             } catch (err) {
                 console.error("Failed to fetch modules", err);
+                setModules([...interactiveModules]);
             } finally {
                 setLoading(false);
             }

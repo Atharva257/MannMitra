@@ -2,6 +2,8 @@ import Assessment from "../models/Assessment.js";
 import User from "../models/User.js";
 import CrisisLog from "../models/CrisisLog.js";
 import { allotMentorToStudent } from "../services/allotmentService.js";
+import { checkAndAwardBadges } from "../services/badgeService.js";
+import { detectAndHandleCrisis, handleCrisisMatch } from "../services/safetyService.js";
 
 // Helper to calculate score + severity
 const calculateScore = (answers) => {
@@ -24,11 +26,14 @@ export const submitAssessment = async (req, res) => {
 
     const { score, severity } = calculateScore(answers);
 
+    // Automatic Crisis Trigger
     if (score >= 15 || answers[8] > 0) {
-      await CrisisLog.create({
-        user: req.user._id,
-        trigger: answers[8] > 0 ? "Q9 > 0" : "Score >= 15",
-      });
+      await handleCrisisMatch(
+        req.user, 
+        `High Assessment Score: ${score} (${severity}). Q9: ${answers[8]}`, 
+        "assessment", 
+        score >= 20 ? "high" : "medium"
+      );
     }
 
     const assessment = await Assessment.create({
@@ -39,10 +44,17 @@ export const submitAssessment = async (req, res) => {
     });
 
     // Update User Status & Allot Mentor
-    await User.findByIdAndUpdate(req.user._id, { assessmentCompleted: true });
+    const user = await User.findById(req.user._id);
+    user.assessmentCompleted = true;
+    user.stats.assessmentCount = (user.stats.assessmentCount || 0) + 1;
+    
+    // Check for new badges
+    const newBadges = await checkAndAwardBadges(user);
+    await user.save();
+
     await allotMentorToStudent(req.user._id);
 
-    res.json({ score, severity, assessment });
+    res.json({ score, severity, assessment, newBadges });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

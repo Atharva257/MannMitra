@@ -12,12 +12,14 @@ import {
   Loader2,
   Trash2
 } from "lucide-react";
+import CrisisModal from "./CrisisModal";
 
 function Chatbot() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userContext, setUserContext] = useState(null);
+  const [showCrisisModal, setShowCrisisModal] = useState(false);
   const chatContainerRef = useRef(null);
 
   useEffect(() => {
@@ -67,6 +69,11 @@ function Chatbot() {
       const chatHistory = updatedMessages.slice(-6, -1).map(m => ({ sender: m.sender, text: m.text }));
       const res = await sendMessage(textToSend, chatHistory);
       API.put("/users/log-activity").catch(e => console.error(e));
+
+      if (res.crisisDetected) {
+        setShowCrisisModal(true);
+      }
+
       const botMessage = { sender: "bot", text: res.reply, timestamp: new Date() };
       setMessages(prev => [...prev, botMessage]);
     } catch (err) {
@@ -207,6 +214,7 @@ function Chatbot() {
           </form>
         </div>
       </div>
+      {showCrisisModal && <CrisisModal onClose={() => setShowCrisisModal(false)} />}
     </div>
   );
 }

@@ -63,8 +63,16 @@ function Login({ setAuth }) {
         navigate("/dashboard", { replace: true });
       }
     } catch (err) {
-      setMsg(err.response?.data?.message || "Invalid credentials. Please try again.");
-      setMsgType("error");
+      if (err.response?.status === 403 && err.response?.data?.unverified) {
+        setMsg("Please verify your email before logging in.");
+        setMsgType("error");
+        setTimeout(() => {
+          navigate("/verify-email", { state: { email: form.email } });
+        }, 2000);
+      } else {
+        setMsg(err.response?.data?.message || "Invalid credentials. Please try again.");
+        setMsgType("error");
+      }
     } finally {
       setIsLoading(false);
     }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import API from "../services/api";
 import { MessageSquare, Heart, Send, User, ShieldAlert, Filter, Plus, X } from "lucide-react";
+import CrisisModal from "./CrisisModal";
 
 export default function Forum() {
   const [posts, setPosts] = useState([]);
@@ -11,6 +12,7 @@ export default function Forum() {
   // New Post Form
   const [newPost, setNewPost] = useState({ title: "", content: "", category: "General", isAnonymous: false });
   const [commentText, setCommentText] = useState({});
+  const [showCrisisModal, setShowCrisisModal] = useState(false);
   const userId = JSON.parse(localStorage.getItem("user"))?._id;
 
   const categories = ["All", "General", "Anxiety", "Depression", "Academic Stress", "Success Story"];
@@ -39,7 +41,12 @@ export default function Forum() {
       setNewPost({ title: "", content: "", category: "General", isAnonymous: false });
       setShowNewPost(false);
     } catch (err) {
-      alert("Failed to create post. Please try again.");
+      if (err.response?.data?.crisisDetected) {
+        setShowCrisisModal(true);
+        setShowNewPost(false);
+      } else {
+        alert("Failed to create post. Please try again.");
+      }
     }
   };
 
@@ -62,7 +69,11 @@ export default function Forum() {
       setPosts(posts.map(p => p._id === postId ? { ...p, comments: [...p.comments, data] } : p));
       setCommentText({ ...commentText, [postId]: "" });
     } catch (err) {
-      console.error(err);
+      if (err.response?.data?.crisisDetected) {
+        setShowCrisisModal(true);
+      } else {
+        console.error(err);
+      }
     }
   };
 
@@ -238,6 +249,7 @@ export default function Forum() {
           ))
         )}
       </div>
+      {showCrisisModal && <CrisisModal onClose={() => setShowCrisisModal(false)} />}
     </div>
   );
 }

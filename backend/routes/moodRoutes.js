@@ -1,6 +1,7 @@
 import express from "express";
 import Mood from "../models/Mood.js";
 import protect from "../middleware/authMiddleware.js";
+import { handleCrisisMatch, checkMoodTrend } from "../services/safetyService.js";
 
 const router = express.Router();
 
@@ -24,6 +25,18 @@ router.post("/", protect, async (req, res) => {
     }
 
     const newMood = await Mood.create({ user: userId, mood });
+
+    // Immediate Trend Check
+    const { isNegativeTrend, moods } = await checkMoodTrend(userId);
+    if (isNegativeTrend) {
+      await handleCrisisMatch(
+        req.user, 
+        `Automatic Alert: Consistent negative mood trend detected (${moods.join(' -> ')})`, 
+        "mood", 
+        "medium"
+      );
+    }
+
     res.status(201).json(newMood);
   } catch (err) {
     res.status(500).json({ message: err.message });

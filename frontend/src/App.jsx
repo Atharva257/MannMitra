@@ -1,33 +1,35 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
-
-
-import Register from "./pages/Register";
-import Login from "./pages/Login";
-import Assessment from "./pages/Assessment";
-import Dashboard from "./pages/Dashboard";
-import Chatbot from "./pages/Chatbot";
-import TrustedContact from "./pages/TrustedContact";
-import AdminDashboard from "./pages/AdminDashboard";
-import MentorDashboard from "./pages/MentorDashboard";
-import LandingPage from "./pages/LandingPage";
-import MentorSession from "./pages/MentorSession";
-import StudentSession from "./pages/StudentSession";
-import RBTGame from "./pages/RBTGame";
-import TherapyModules from "./pages/TherapyModules";
-import ABCDEGame from "./pages/ABCDEGame";
-import ModuleDetail from "./pages/ModuleDetail";
-import BreathingBubble from "./pages/BreathingBubble";
-import MoodCanvas from "./pages/MoodCanvas";
-import GratitudeJournal from "./pages/GratitudeJournal";
-import ResourceLibrary from "./pages/ResourceLibrary";
-import Forum from "./pages/Forum";
-import BadgeGallery from "./pages/BadgeGallery";
+import PageLoader from "./components/PageLoader";
 import BadgeCelebration from "./components/BadgeCelebration";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
+
+// Lazy Loaded Pages
+const Register = lazy(() => import("./pages/Register"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const Login = lazy(() => import("./pages/Login"));
+const Assessment = lazy(() => import("./pages/Assessment"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Chatbot = lazy(() => import("./pages/Chatbot"));
+const TrustedContact = lazy(() => import("./pages/TrustedContact"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const MentorDashboard = lazy(() => import("./pages/MentorDashboard"));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const MentorSession = lazy(() => import("./pages/MentorSession"));
+const StudentSession = lazy(() => import("./pages/StudentSession"));
+const RBTGame = lazy(() => import("./pages/RBTGame"));
+const TherapyModules = lazy(() => import("./pages/TherapyModules"));
+const ABCDEGame = lazy(() => import("./pages/ABCDEGame"));
+const ModuleDetail = lazy(() => import("./pages/ModuleDetail"));
+const BreathingBubble = lazy(() => import("./pages/BreathingBubble"));
+const MoodCanvas = lazy(() => import("./pages/MoodCanvas"));
+const GratitudeJournal = lazy(() => import("./pages/GratitudeJournal"));
+const ResourceLibrary = lazy(() => import("./pages/ResourceLibrary"));
+const Forum = lazy(() => import("./pages/Forum"));
+const BadgeGallery = lazy(() => import("./pages/BadgeGallery"));
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 
 function App() {
   const [auth, setAuth] = useState(() => !!localStorage.getItem("token"));
@@ -47,7 +49,6 @@ function App() {
       const userJson = localStorage.getItem("user");
       try {
         const user = userJson ? JSON.parse(userJson) : null;
-        console.log("Auth Update:", { hasToken: !!token, role: user?.role });
         setAuth(!!token);
         setRole(user?.role || null);
       } catch (e) {
@@ -69,7 +70,7 @@ function App() {
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 border-none outline-none ring-0">
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-gray-400 font-bold animate-pulse uppercase tracking-[0.3em] text-[10px]">Securing Session</p>
@@ -84,57 +85,59 @@ function App() {
         <Navbar auth={auth} setAuth={setAuth} role={role} />
 
         <div className="p-6">
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/library" element={<ResourceLibrary />} />
-            <Route path="/forum" element={<Forum />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/login" element={<Login setAuth={setAuth} />} />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/library" element={<ResourceLibrary />} />
+              <Route path="/forum" element={<Forum />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/login" element={<Login setAuth={setAuth} />} />
 
-            {/* Student-only routes */}
-            <Route
-              path="/assessment"
-              element={auth && role === "student" ? <Assessment /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/dashboard"
-              element={auth && role === "student" ? <Dashboard /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/chat"
-              element={auth && role === "student" ? <Chatbot /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/contacts"
-              element={auth ? <TrustedContact /> : <Navigate to="/login" />}
-            />
+              {/* Student-only routes */}
+              <Route
+                path="/assessment"
+                element={auth && role === "student" ? <Assessment /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/dashboard"
+                element={auth && role === "student" ? <Dashboard /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/chat"
+                element={auth && role === "student" ? <Chatbot /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/contacts"
+                element={auth ? <TrustedContact /> : <Navigate to="/login" />}
+              />
 
-            {/* Admin-only routes */}
-            <Route
-              path="/admin"
-              element={auth && role === "admin" ? <AdminDashboard /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/mentor-dashboard"
-              element={auth && role === "mentor" ? <MentorDashboard /> : <Navigate to="/login" />}
-            />
+              {/* Admin-only routes */}
+              <Route
+                path="/admin"
+                element={auth && role === "admin" ? <AdminDashboard /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/mentor-dashboard"
+                element={auth && role === "mentor" ? <MentorDashboard /> : <Navigate to="/login" />}
+              />
 
-            {/* Video Session Routes */}
-            <Route path="/mentor/session" element={<MentorSession />} />
-            <Route path="/student/session" element={<StudentSession />} />
-            <Route path="/rbt-game" element={<RBTGame />} />
-            <Route path="/rbt-abcde" element={<ABCDEGame />} />
-            <Route path="/therapy-modules" element={<TherapyModules />} />
-            <Route path="/modules/breathing-bubble" element={<BreathingBubble />} />
-            <Route path="/modules/mood-canvas" element={<MoodCanvas />} />
-            <Route path="/modules/gratitude-journal" element={<GratitudeJournal />} />
-            <Route path="/modules/:id" element={<ModuleDetail />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/badges" element={<BadgeGallery />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-
-          </Routes>
+              {/* Video Session Routes */}
+              <Route path="/mentor/session" element={<MentorSession />} />
+              <Route path="/student/session" element={<StudentSession />} />
+              <Route path="/rbt-game" element={<RBTGame />} />
+              <Route path="/rbt-abcde" element={<ABCDEGame />} />
+              <Route path="/therapy-modules" element={<TherapyModules />} />
+              <Route path="/modules/breathing-bubble" element={<BreathingBubble />} />
+              <Route path="/modules/mood-canvas" element={<MoodCanvas />} />
+              <Route path="/modules/gratitude-journal" element={<GratitudeJournal />} />
+              <Route path="/modules/:id" element={<ModuleDetail />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/badges" element={<BadgeGallery />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+            </Routes>
+          </Suspense>
         </div>
         <BadgeCelebration />
       </div>

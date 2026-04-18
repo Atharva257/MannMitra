@@ -9,6 +9,7 @@ import Mentor from "../models/Mentor.js";
 import protect from "../middleware/authMiddleware.js";
 import adminOnly from "../middleware/adminMiddleware.js";
 import { createMeeting } from "../services/googleCalendarService.js";
+import ForumPost from "../models/ForumPost.js";
 
 const router = express.Router();
 
@@ -230,6 +231,67 @@ router.get("/allotments", protect, adminOnly, async (req, res) => {
 
     res.json(students);
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// MASTER DELETE - Soft Delete User and Cleanup References
+router.delete("/users/:id", protect, adminOnly, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const userId = user._id;
+    const userEmail = user.email;
+
+    // 1. Soft Delete the User (hide from normal queries)
+    user.deletedAt = new Date();
+    await user.save();
+
+    // 2. Cascading Cleanup based on Role
+    if (user.role === "mentor") {
+      // Find the Mentor Profile record
+      const mentorProfile = await Mentor.findOne({ email: userEmail });
+      const mentorProfileId = mentorProfile ? mentorProfile._id : null;
+
+      // Unassign students from this mentor
+      await User.updateMany(
+        { mentor: { $in: [userId, mentorProfileId].filter(id => id !== null) } },
+        { mentor: null }
+      );
+
+      // Clean up Mentor profile
+      if (mentorProfile) {
+        await Mentor.findByIdAndDelete(mentorProfileId);
+      }
+    } else if (user.role === "student") {
+       // Pull from mentor lists if they exist
+       await User.updateMany(
+         { role: "mentor" },
+         { $pull: { students: userId } }
+       );
+    }
+
+    // 3. Cancel scheduled sessions/appointments
+    await Session.updateMany(
+      { $or: [{ student: userId }, { mentor: userId }], status: "scheduled" },
+      { status: "cancelled" }
+    );
+    
+    await Appointment.updateMany(
+      { $or: [{ student: userId }, { mentor: userId }], status: "scheduled" },
+      { status: "cancelled" }
+    );
+
+    // 4. Anonymize Forum Content
+    await ForumPost.updateMany(
+      { author: userId },
+      { isAnonymous: true }
+    );
+
+    res.json({ message: "User soft-deleted and references cleaned up successfully." });
+  } catch (error) {
+    console.error("Cleanup Error:", error);
     res.status(500).json({ message: error.message });
   }
 });

@@ -65,6 +65,20 @@ function AdminDashboard() {
     }
   };
 
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("CRITICAL ACTION: Are you sure you want to delete this user? All their assignments and scheduled sessions will be cleaned up. This cannot be easily undone.")) return;
+    
+    // Safety check: Prompt for typing "DELETE" or just confirm twice?
+    // Let's stick to standard confirm for now.
+    
+    try {
+      await API.delete(`/admin/users/${userId}`);
+      fetchData(); // Refresh everything
+    } catch (err) {
+      alert(err.response?.data?.message || "Delete failed");
+    }
+  };
+
   if (loading) return (
     <div className="flex h-screen items-center justify-center bg-gray-50">
       <div className="text-center">
@@ -255,6 +269,12 @@ function AdminDashboard() {
                                   {s.isAtRisk ? 'CRITICAL' : 'STABLE'}
                                 </span>
                                 <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-600 transition" />
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteUser(s._id); }}
+                                  className="p-2 text-gray-200 hover:text-red-600 opacity-0 group-hover:opacity-100 transition"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </div>
                             </div>
                           ))
@@ -284,8 +304,16 @@ function AdminDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {mentors.map((m, i) => (
                     <div key={i} className="p-8 bg-gray-50/50 dark:bg-slate-800/30 rounded-[2rem] border border-gray-100 dark:border-slate-800/50 flex flex-col items-center text-center group hover:bg-white dark:hover:bg-slate-800 transition shadow-hover">
-                      <div className="w-20 h-20 bg-white dark:bg-slate-700 rounded-3xl flex items-center justify-center text-blue-600 shadow-lg text-2xl font-black mb-6 group-hover:scale-110 transition">
-                        {m.name.charAt(0)}
+                      <div className="relative group/avatar">
+                        <div className="w-20 h-20 bg-white dark:bg-slate-700 rounded-3xl flex items-center justify-center text-blue-600 shadow-lg text-2xl font-black mb-6 group-hover:scale-110 transition">
+                          {m.name.charAt(0)}
+                        </div>
+                        <button
+                          onClick={() => handleDeleteUser(m.userId || m._id)} 
+                          className="absolute -top-2 -right-2 p-2 bg-red-50 text-red-600 rounded-xl opacity-0 hover:bg-red-600 hover:text-white group-hover:opacity-100 transition shadow-sm border border-red-100"
+                        >
+                           <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                       <h5 className="text-xl font-black text-gray-900 dark:text-white mb-2">{m.name}</h5>
                       <p className="text-blue-600 dark:text-blue-400 font-black text-xs uppercase tracking-widest mb-4">{m.specialization}</p>

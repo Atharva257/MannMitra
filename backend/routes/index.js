@@ -12,6 +12,7 @@ import forumRoutes from "./forumRoutes.js";
 import moodRoutes from "./moodRoutes.js";
 import quoteRoutes from "./quoteRoutes.js";
 import adminAuthRoutes from "./adminAuthRoutes.js";
+import supportRoutes from "./supportRoutes.js";
 
 const router = express.Router();
 
@@ -29,5 +30,6 @@ router.use("/modules", moduleRoutes);
 router.use("/forum", forumRoutes);
 router.use("/moods", moodRoutes);
 router.use("/quotes", quoteRoutes);
+router.use("/support", supportRoutes);
 
 export default router;

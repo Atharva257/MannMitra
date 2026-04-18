@@ -1,4 +1,5 @@
 import ForumPost from "../models/ForumPost.js";
+import { detectAndHandleCrisis } from "../services/safetyService.js";
 
 // @desc Get all posts
 // @route GET /api/forum
@@ -39,7 +40,14 @@ export const createPost = async (req, res) => {
   try {
     const { title, content, category, isAnonymous } = req.body;
     
-    // Server-side safety check / word block list can go here
+    // Server-side safety check
+    const { isCrisis } = await detectAndHandleCrisis(content, req.user, "forum");
+    if (isCrisis) {
+      return res.status(400).json({ 
+        message: "It sounds like you're going through a lot right now. Please know that you're not alone. If you're in immediate danger, please contact emergency services or a helpline: 988 (US/Canada), 9152987821 (India).",
+        crisisDetected: true 
+      });
+    }
 
     const newPost = new ForumPost({
       author: req.user.id,
@@ -68,6 +76,16 @@ export const createPost = async (req, res) => {
 export const addComment = async (req, res) => {
   try {
     const { content, isAnonymous } = req.body;
+    
+    // Safety Check
+    const { isCrisis } = await detectAndHandleCrisis(content, req.user, "forum");
+    if (isCrisis) {
+      return res.status(400).json({ 
+        message: "It sounds like you're going through a lot right now. Please reach out for help. Emergency services: 988 (US/Canada), 9152987821 (India).",
+        crisisDetected: true 
+      });
+    }
+
     const post = await ForumPost.findById(req.params.id);
 
     if (!post) return res.status(404).json({ message: "Post not found" });

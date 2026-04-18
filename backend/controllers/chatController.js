@@ -2,19 +2,20 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import Assessment from "../models/Assessment.js";
 import User from "../models/User.js";
 import { checkAndAwardBadges } from "../services/badgeService.js";
+import { detectAndHandleCrisis } from "../services/safetyService.js";
 
 export const chatReply = async (req, res) => {
   const { message, chatHistory = [] } = req.body;
 
   if (!message) return res.status(400).json({ reply: "Please enter a message." });
 
-  // Crisis Detection Interceptor
-  const crisisKeywords = ["suicide", "end it", "kill myself", "hopeless", "want to die", "hurt myself", "don't want to live"];
-  const isCrisis = crisisKeywords.some(keyword => message.toLowerCase().includes(keyword));
+  // Enhanced Crisis Detection
+  const { isCrisis } = await detectAndHandleCrisis(message, req.user, "chat");
   
   if (isCrisis) {
     return res.json({ 
-      reply: "It sounds like you are in intense emotional pain right now. Please know that you are not alone and help is available. **If you are in immediate danger, please call emergency services. Helplines: 988 (US/Canada), 112 (EU), 9152987821 (India - AASRA).** Please reach out to your assigned mentor or a trusted contact right now. We care about you." 
+      reply: "It sounds like you are in intense emotional pain right now. Please know that you are not alone and help is available. **If you are in immediate danger, please call emergency services. Helplines: 988 (US/Canada), 112 (EU), 9152987821 (India - AASRA).** Please reach out to your assigned mentor or a trusted contact right now. We care about you.",
+      crisisDetected: true 
     });
   }
 

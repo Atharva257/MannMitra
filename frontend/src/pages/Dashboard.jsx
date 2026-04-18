@@ -1,29 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense, lazy } from "react";
 import { Link } from "react-router-dom";
 import API from "../services/api";
 import { getHistory } from "../services/assessmentService";
-import { Line } from "react-chartjs-2";
-import { BookOpen, Gamepad2, ArrowRight, Bot, Sparkles, Bell, Download, Award, ChevronRight } from "lucide-react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
+import { BookOpen, Gamepad2, ArrowRight, Bot, Sparkles, Bell, Download, Award, ChevronRight, Loader2 } from "lucide-react";
 import MoodTracker from "../components/MoodTracker";
 import MotivationPopup from "../components/MotivationPopup";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+const AssessmentChart = lazy(() => import("../components/AssessmentChart"));
 
 function Dashboard() {
   const [history, setHistory] = useState([]);
-
   const [user, setUser] = useState(null);
 
   const needsReassessment = history.length > 0 && 
@@ -63,6 +49,12 @@ function Dashboard() {
     const element = document.getElementById("pdf-export-area");
     if (!element) return;
     try {
+      // Dynamic imports for heavy libraries to keep initial bundle small
+      const [ { default: jsPDF }, { default: html2canvas } ] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas")
+      ]);
+
       const canvas = await html2canvas(element, { scale: 2, useCORS: true });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
@@ -285,9 +277,11 @@ function Dashboard() {
           </div>
 
           {/* Progress Chart */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6 dark:border dark:border-slate-700">
-            <h3 className="text-lg font-semibold text-purple-600 dark:text-purple-400 mb-4">Your Progress Over Time</h3>
-            <Line data={chartData} />
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6 dark:border dark:border-slate-700 min-h-[300px] flex flex-col items-center justify-center">
+            <h3 className="text-lg font-semibold text-purple-600 dark:text-purple-400 mb-4 self-start">Your Progress Over Time</h3>
+            <Suspense fallback={<Loader2 className="animate-spin text-purple-600" />}>
+              <AssessmentChart data={chartData} />
+            </Suspense>
           </div>
 
           {/* History Table */}

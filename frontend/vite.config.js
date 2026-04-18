@@ -48,4 +48,16 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['lucide-react', 'framer-motion'],
+          extras: ['axios', 'canvas-confetti'] 
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000 // Raise limit slightly now that we've split chunks
+  }
 })

@@ -6,9 +6,19 @@ export const addContact = async (req, res) => {
     if (req.user.role === "student") {
       return res.status(403).json({ message: "Only mentors and admins can add emergency contacts" });
     }
-    const { name, phone } = req.body;
-    const contact = await TrustedContact.create({ name, phone });
+    const { name, phone, relationship, email } = req.body;
+    const contact = await TrustedContact.create({ name, phone, relationship, email });
     res.json(contact);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Delete contact (Admin only)
+export const deleteContact = async (req, res) => {
+  try {
+    await TrustedContact.findByIdAndDelete(req.params.id);
+    res.json({ message: "Contact deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

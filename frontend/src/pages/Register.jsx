@@ -25,18 +25,16 @@ function Register() {
     try {
       const data = await register(form);
 
-      // ✅ Store user session immediately
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data));
-
-      setMsg("Account created! Let's start your journey 🌿");
+      setMsg("Registration successful! Redirecting to verification... 🌿");
       setMsgType("success");
 
-      // Redirect to assessment after a short delay
+      // Redirect to verification after a short delay
       setTimeout(() => {
-        navigate("/assessment", { replace: true });
-        window.location.reload(); // Ensure auth state updates
-      }, 2000);
+        navigate("/verify-email", { 
+          replace: true,
+          state: { email: form.email } 
+        });
+      }, 1500);
     } catch (err) {
       setMsg(err.response?.data?.message || "Registration failed. Please try again.");
       setMsgType("error");

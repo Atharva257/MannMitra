@@ -8,6 +8,8 @@ import { v4 as uuidv4 } from "uuid";
 import Mentor from "../models/Mentor.js";
 import protect from "../middleware/authMiddleware.js";
 import adminOnly from "../middleware/adminMiddleware.js";
+import { createMeeting } from "../services/googleCalendarService.js";
+import ForumPost from "../models/ForumPost.js";
 
 const router = express.Router();
 
@@ -110,18 +112,43 @@ router.get("/mentors", protect, adminOnly, async (req, res) => {
 
 // Assign mentor to student
 router.put("/students/:id/assign-mentor", protect, adminOnly, async (req, res) => {
-  const { mentorId } = req.body;
-  const student = await User.findById(req.params.id);
-  if (!student) return res.status(404).json({ message: "Student not found" });
+  try {
+    const { mentorId } = req.body;
+    const student = await User.findById(req.params.id);
+    if (!student) return res.status(404).json({ message: "Student not found" });
 
-  student.mentor = mentorId;
-  await student.save();
-  res.json({ message: "Mentor assigned successfully" });
+    // Find the corresponding User record for this mentor to ensure dashboard compatibility
+    const mentorRecord = await Mentor.findById(mentorId);
+    if (mentorRecord) {
+      const mentorUser = await User.findOne({ email: mentorRecord.email });
+      if (mentorUser) {
+        student.mentor = mentorUser._id;
+      } else {
+        student.mentor = mentorId; // Fallback to Mentor ID if no user account yet
+      }
+    } else {
+      student.mentor = mentorId;
+    }
+
+    await student.save();
+    res.json({ message: "Mentor assigned successfully", mentorId: student.mentor });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 // Schedule appointment
 router.post("/students/:id/appointments", protect, adminOnly, async (req, res) => {
   const { mentorId, date } = req.body;
+
+  const student = await User.findById(req.params.id);
+  if (!student) return res.status(404).json({ message: "Student not found" });
+
+  const mentorRecord = await Mentor.findById(mentorId);
+  if (!mentorRecord) return res.status(404).json({ message: "Mentor not found" });
+
+  const mentorUser = await User.findOne({ email: mentorRecord.email });
+  if (!mentorUser) return res.status(404).json({ message: "Mentor user account not found" });
 
   // Create Appointment (Legacy/Tracking)
   const appt = await Appointment.create({
@@ -131,36 +158,60 @@ router.post("/students/:id/appointments", protect, adminOnly, async (req, res) =
     status: "scheduled",
   });
 
-  // Create Video Session with unique Room ID
-  // Find the User ID for this Mentor ID
-  const mentorRecord = await Mentor.findById(mentorId);
-  const mentorUser = await User.findOne({ email: mentorRecord?.email });
-
   if (mentorUser) {
-    await Session.create({
-      student: req.params.id,
-      mentor: mentorUser._id, // Correctly ref the User model
-      scheduledAt: date,
-      meetingRoomId: `mm-${uuidv4().slice(0, 8)}`,
-    });
+    try {
+      // Create Google Meet link
+      const { link, eventId } = await createMeeting(
+        `Session: ${student.name} & ${mentorRecord.name}`,
+        date,
+        30
+      );
+
+      await Session.create({
+        student: req.params.id,
+        mentor: mentorUser._id,
+        scheduledAt: date,
+        meetingLink: link,
+        calendarEventId: eventId,
+      });
+    } catch (error) {
+      console.error("Failed to create Google Meet link", error);
+      // Fallback or handle error
+    }
   }
 
   res.status(201).json(appt);
 });
 
+// GET all appointments (Global)
+router.get("/all-appointments", protect, adminOnly, async (req, res) => {
+  try {
+    const appointments = await Appointment.find()
+      .populate("student", "name email")
+      .populate("mentor", "name specialization");
+    res.json(appointments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // NEW: Admin Dashboard Stats
 router.get("/stats", protect, adminOnly, async (req, res) => {
   try {
-    const [studentCount, mentorCount, pendingAssessments] = await Promise.all([
+    const [studentCount, mentorCount, pendingAssessments, avgScoreResult] = await Promise.all([
       User.countDocuments({ role: "student" }),
       User.countDocuments({ role: "mentor" }),
       User.countDocuments({ role: "student", assessmentCompleted: false }),
+      Assessment.aggregate([{ $group: { _id: null, avgScore: { $avg: "$score" } } }])
     ]);
+
+    const averagePhqScore = avgScoreResult.length > 0 ? parseFloat(avgScoreResult[0].avgScore.toFixed(1)) : 0;
 
     res.json({
       totalStudents: studentCount,
       totalMentors: mentorCount,
       pendingAssessments,
+      averagePhqScore
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -172,10 +223,75 @@ router.get("/allotments", protect, adminOnly, async (req, res) => {
   try {
     const students = await User.find({ role: "student", mentor: { $ne: null } })
       .select("name email mentor")
-      .populate("mentor", "name specialization");
+      .populate({
+        path: "mentor",
+        model: "Mentor",
+        select: "name specialization"
+      });
 
     res.json(students);
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// MASTER DELETE - Soft Delete User and Cleanup References
+router.delete("/users/:id", protect, adminOnly, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const userId = user._id;
+    const userEmail = user.email;
+
+    // 1. Soft Delete the User (hide from normal queries)
+    user.deletedAt = new Date();
+    await user.save();
+
+    // 2. Cascading Cleanup based on Role
+    if (user.role === "mentor") {
+      // Find the Mentor Profile record
+      const mentorProfile = await Mentor.findOne({ email: userEmail });
+      const mentorProfileId = mentorProfile ? mentorProfile._id : null;
+
+      // Unassign students from this mentor
+      await User.updateMany(
+        { mentor: { $in: [userId, mentorProfileId].filter(id => id !== null) } },
+        { mentor: null }
+      );
+
+      // Clean up Mentor profile
+      if (mentorProfile) {
+        await Mentor.findByIdAndDelete(mentorProfileId);
+      }
+    } else if (user.role === "student") {
+       // Pull from mentor lists if they exist
+       await User.updateMany(
+         { role: "mentor" },
+         { $pull: { students: userId } }
+       );
+    }
+
+    // 3. Cancel scheduled sessions/appointments
+    await Session.updateMany(
+      { $or: [{ student: userId }, { mentor: userId }], status: "scheduled" },
+      { status: "cancelled" }
+    );
+    
+    await Appointment.updateMany(
+      { $or: [{ student: userId }, { mentor: userId }], status: "scheduled" },
+      { status: "cancelled" }
+    );
+
+    // 4. Anonymize Forum Content
+    await ForumPost.updateMany(
+      { author: userId },
+      { isAnonymous: true }
+    );
+
+    res.json({ message: "User soft-deleted and references cleaned up successfully." });
+  } catch (error) {
+    console.error("Cleanup Error:", error);
     res.status(500).json({ message: error.message });
   }
 });

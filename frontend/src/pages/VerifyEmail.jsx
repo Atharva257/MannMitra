@@ -31,21 +31,26 @@ function VerifyEmail() {
 
   const handleChange = (e, index) => {
     const value = e.target.value.replace(/[^0-9]/g, "");
-    if (!value) return;
-
+    
     const newOtp = [...otp];
     newOtp[index] = value.substring(value.length - 1);
     setOtp(newOtp);
 
-    // Auto focus next
-    if (index < 5) {
+    // Auto focus next if a digit was entered
+    if (value && index < 5) {
       document.getElementById(`otp-${index + 1}`).focus();
     }
   };
 
   const handleKeyDown = (e, index) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      document.getElementById(`otp-${index - 1}`).focus();
+    if (e.key === "Backspace") {
+      if (!otp[index] && index > 0) {
+        // Current box is empty, move back and clear previous box
+        const newOtp = [...otp];
+        newOtp[index - 1] = "";
+        setOtp(newOtp);
+        document.getElementById(`otp-${index - 1}`).focus();
+      }
     }
   };
 
@@ -95,27 +100,27 @@ function VerifyEmail() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-indigo-50 via-blue-50 to-emerald-50">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-indigo-50 via-blue-50 to-emerald-50 pt-20 pb-10">
       {/* Background patterns */}
-      <div className="absolute w-96 h-96 bg-indigo-200/40 rounded-full mix-blend-multiply filter blur-3xl animate-blob top-[-6rem] left-[-6rem]" />
-      <div className="absolute w-80 h-80 bg-emerald-200/40 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000 bottom-[-6rem] right-[-6rem]" />
+      <div className="absolute w-72 md:w-96 h-72 md:h-96 bg-indigo-200/40 rounded-full mix-blend-multiply filter blur-3xl animate-blob top-[-3rem] left-[-3rem]" />
+      <div className="absolute w-60 md:w-80 h-60 md:h-80 bg-emerald-200/40 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000 bottom-[-3rem] right-[-3rem]" />
 
-      <div className="relative z-10 w-full max-w-md bg-white/40 backdrop-blur-2xl border border-white/40 rounded-[2.5rem] shadow-2xl p-10 mx-4 text-center">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mb-6 shadow-sm border border-emerald-200/50">
-            <Mail className="w-10 h-10 text-emerald-600" />
+      <div className="relative z-10 w-full max-w-md bg-white/40 backdrop-blur-2xl border border-white/40 rounded-[2.5rem] shadow-2xl p-6 md:p-10 mx-4 text-center">
+        <div className="flex flex-col items-center mb-6 md:mb-8">
+          <div className="w-16 h-16 md:w-20 md:h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mb-4 md:mb-6 shadow-sm border border-emerald-200/50">
+            <Mail className="w-8 h-8 md:w-10 md:h-10 text-emerald-600" />
           </div>
-          <h1 className="text-3xl font-black text-gray-800 tracking-tight mb-2">
+          <h1 className="text-2xl md:text-3xl font-black text-gray-800 tracking-tight mb-2">
             Verify Your Email
           </h1>
-          <p className="text-gray-600 text-sm leading-relaxed px-4">
+          <p className="text-gray-600 text-xs md:text-sm leading-relaxed px-4">
             We've sent a 6-digit verification code to <br />
-            <span className="font-bold text-emerald-600 italic">{email}</span>
+            <span className="font-bold text-emerald-600 italic break-all">{email}</span>
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="flex justify-center gap-3">
+        <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
+          <div className="flex justify-center gap-2 md:gap-3">
             {otp.map((digit, index) => (
               <input
                 key={index}
@@ -125,7 +130,7 @@ function VerifyEmail() {
                 value={digit}
                 onChange={(e) => handleChange(e, index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                className="w-12 h-14 text-center text-2xl font-black bg-white rounded-2xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-200/50 outline-none transition shadow-sm"
+                className="w-10 h-12 md:w-12 md:h-14 text-center text-xl md:text-2xl font-black bg-white rounded-xl md:rounded-2xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-200/50 outline-none transition shadow-sm"
                 disabled={isLoading}
               />
             ))}
@@ -134,7 +139,7 @@ function VerifyEmail() {
           <button
             type="submit"
             disabled={isLoading || otp.join("").length < 6}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black shadow-xl shadow-emerald-200/50 hover:scale-[1.02] active:scale-95 transition disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3 md:py-4 rounded-xl md:rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black shadow-xl shadow-emerald-200/50 hover:scale-[1.02] active:scale-95 transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <Loader2 className="w-6 h-6 animate-spin" />

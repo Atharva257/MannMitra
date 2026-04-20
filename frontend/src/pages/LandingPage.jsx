@@ -27,7 +27,7 @@ const LandingPage = () => {
               <span>Your Personal Mental Wellness Companion</span>
             </div>
             
-            <h1 className="text-4xl sm:text-6xl lg:text-8xl font-black leading-tight tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tighter text-slate-900 dark:text-white">
               Nurture Your Mind with <br />
               <span className="text-gradient">MannMitra</span>
             </h1>

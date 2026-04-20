@@ -83,8 +83,7 @@ function App() {
     <Router>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-green-50 to-purple-50 dark:from-slate-900 dark:via-gray-900 dark:to-slate-800 text-gray-900 dark:text-gray-100 transition-colors duration-300">
         <Navbar auth={auth} setAuth={setAuth} role={role} />
-
-        <div className="p-6">
+        <div className="px-6 pb-6 lg:px-10 lg:pb-10">
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<LandingPage />} />

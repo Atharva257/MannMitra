@@ -1,20 +1,31 @@
 import nodemailer from "nodemailer";
+import dns from "dns";
 
-// Explicit SMTP config to force IPv4 (avoids ENETUNREACH on Render's IPv6-incompatible network)
+/**
+ * Custom DNS lookup that forces IPv4 resolution.
+ * This is the ONLY reliable way to prevent ENETUNREACH on Render's network,
+ * which does not support outbound IPv6 (address family 2404:6800:...).
+ * Neither `family: 4` nor `dns.setDefaultResultOrder` work reliably on Render.
+ */
+const ipv4Lookup = (hostname, options, callback) => {
+  dns.lookup(hostname, { ...options, family: 4 }, callback);
+};
+
 const createTransporter = () =>
   nodemailer.createTransport({
-    host: "smtp.gmail.com", // Explicit host forces DNS resolution we can control
-    port: 587,              // Port 587 + STARTTLS is more reliable than 465 (SSL) on Render
-    secure: false,          // false = STARTTLS (upgrades after connection)
-    family: 4,              // Force IPv4 — critical fix for Render's network
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // STARTTLS
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
     tls: {
-      rejectUnauthorized: false, // Allow self-signed certs in cloud environments
+      rejectUnauthorized: false,
     },
+    lookup: ipv4Lookup, // ← Force IPv4 at socket connection level
   });
+
 
 /**
  * Send OTP Email for registration verification

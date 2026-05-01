@@ -1,5 +1,21 @@
 import nodemailer from "nodemailer";
 
+// Explicit SMTP config to force IPv4 (avoids ENETUNREACH on Render's IPv6-incompatible network)
+const createTransporter = () =>
+  nodemailer.createTransport({
+    host: "smtp.gmail.com", // Explicit host forces DNS resolution we can control
+    port: 587,              // Port 587 + STARTTLS is more reliable than 465 (SSL) on Render
+    secure: false,          // false = STARTTLS (upgrades after connection)
+    family: 4,              // Force IPv4 — critical fix for Render's network
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false, // Allow self-signed certs in cloud environments
+    },
+  });
+
 /**
  * Send OTP Email for registration verification
  * @param {string} email - Recipient email
@@ -17,13 +33,7 @@ export const sendOTPEmail = async (email, otp) => {
       return;
     }
 
-    const transporter = nodemailer.createTransport({
-      service: process.env.EMAIL_SERVICE || "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    const transporter = createTransporter();
 
     const mailOptions = {
       from: `"MannMitra Safety" <${process.env.EMAIL_USER}>`,
@@ -68,13 +78,7 @@ export const sendContactEmail = async ({ name, email, subject, message }) => {
       return;
     }
 
-    const transporter = nodemailer.createTransport({
-      service: process.env.EMAIL_SERVICE || "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    const transporter = createTransporter();
 
     const mailOptions = {
       from: `"MannMitra Support" <${process.env.EMAIL_USER}>`,

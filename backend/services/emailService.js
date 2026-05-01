@@ -1,31 +1,54 @@
-import nodemailer from "nodemailer";
-import dns from "dns";
+import { google } from "googleapis";
 
 /**
- * Custom DNS lookup that forces IPv4 resolution.
- * This is the ONLY reliable way to prevent ENETUNREACH on Render's network,
- * which does not support outbound IPv6 (address family 2404:6800:...).
- * Neither `family: 4` nor `dns.setDefaultResultOrder` work reliably on Render.
+ * WHY GMAIL API INSTEAD OF SMTP (NODEMAILER):
+ * Render's infrastructure binds outbound TCP connections to an IPv6 socket (:::0).
+ * Gmail's SMTP resolves to IPv6 addresses (2404:6800:...) which Render cannot route.
+ * No nodemailer config (family:4, lookup override, dns.setDefaultResultOrder) can fix
+ * this because the OS itself opens an IPv6 socket before the connection attempt.
+ *
+ * The Gmail API uses HTTPS (port 443) which Render routes correctly over IPv4.
+ * This project already has the required Google OAuth2 credentials in .env.
  */
-const ipv4Lookup = (hostname, options, callback) => {
-  dns.lookup(hostname, { ...options, family: 4 }, callback);
-};
 
-const createTransporter = () =>
-  nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false, // STARTTLS
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-    lookup: ipv4Lookup, // ← Force IPv4 at socket connection level
+const getGmailClient = () => {
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    "https://developers.google.com/oauthplayground" // Must match the URI used when refresh token was generated
+  );
+
+  oauth2Client.setCredentials({
+    refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
   });
 
+  return google.gmail({ version: "v1", auth: oauth2Client });
+};
+
+/**
+ * Encodes an email message to base64url format for the Gmail API
+ */
+const buildRawMessage = ({ from, to, replyTo, subject, html }) => {
+  const replyToHeader = replyTo ? `Reply-To: ${replyTo}\r\n` : "";
+  const message = [
+    `From: ${from}`,
+    `To: ${to}`,
+    replyToHeader.trim(),
+    `Subject: ${subject}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: text/html; charset=utf-8`,
+    ``,
+    html,
+  ]
+    .filter(Boolean)
+    .join("\r\n");
+
+  return Buffer.from(message)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+};
 
 /**
  * Send OTP Email for registration verification
@@ -34,8 +57,12 @@ const createTransporter = () =>
  */
 export const sendOTPEmail = async (email, otp) => {
   try {
-    // Check if we have email credentials
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    // Fallback: log to console if no credentials configured
+    if (
+      !process.env.GOOGLE_CLIENT_ID ||
+      !process.env.GOOGLE_CLIENT_SECRET ||
+      !process.env.GOOGLE_REFRESH_TOKEN
+    ) {
       console.log("-----------------------------------------");
       console.log(`| DEMO EMAIL FOR: ${email}`);
       console.log(`| YOUR OTP CODE IS: ${otp}`);
@@ -44,9 +71,9 @@ export const sendOTPEmail = async (email, otp) => {
       return;
     }
 
-    const transporter = createTransporter();
+    const gmail = getGmailClient();
 
-    const mailOptions = {
+    const raw = buildRawMessage({
       from: `"MannMitra Safety" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Verify Your MannMitra Account 🌿",
@@ -62,9 +89,12 @@ export const sendOTPEmail = async (email, otp) => {
           <p style="font-size: 0.8em; color: #999;">If you didn't create this account, you can safely ignore this email.</p>
         </div>
       `,
-    };
+    });
 
-    await transporter.sendMail(mailOptions);
+    await gmail.users.messages.send({
+      userId: "me",
+      requestBody: { raw },
+    });
   } catch (error) {
     console.error("Email Service Error:", error);
   }
@@ -77,9 +107,13 @@ export const sendOTPEmail = async (email, otp) => {
 export const sendContactEmail = async ({ name, email, subject, message }) => {
   try {
     const supportEmail = "mannmitra.noreply@gmail.com";
-    
-    // Check if we have email credentials
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+
+    // Fallback: log to console if no credentials configured
+    if (
+      !process.env.GOOGLE_CLIENT_ID ||
+      !process.env.GOOGLE_CLIENT_SECRET ||
+      !process.env.GOOGLE_REFRESH_TOKEN
+    ) {
       console.log("-----------------------------------------");
       console.log(`| DEMO CONTACT FORM SUBMISSION`);
       console.log(`| FROM: ${name} (${email})`);
@@ -89,9 +123,9 @@ export const sendContactEmail = async ({ name, email, subject, message }) => {
       return;
     }
 
-    const transporter = createTransporter();
+    const gmail = getGmailClient();
 
-    const mailOptions = {
+    const raw = buildRawMessage({
       from: `"MannMitra Support" <${process.env.EMAIL_USER}>`,
       to: supportEmail,
       replyTo: email,
@@ -103,15 +137,18 @@ export const sendContactEmail = async ({ name, email, subject, message }) => {
             <p><strong>From:</strong> ${name} (${email})</p>
             <p><strong>Subject:</strong> ${subject}</p>
             <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 10px; line-height: 1.6;">
-              ${message.replace(/\n/g, '<br>')}
+              ${message.replace(/\n/g, "<br>")}
             </div>
           </div>
           <p style="font-size: 0.8em; color: #999;">This message was sent from the MannMitra Contact Us form.</p>
         </div>
       `,
-    };
+    });
 
-    await transporter.sendMail(mailOptions);
+    await gmail.users.messages.send({
+      userId: "me",
+      requestBody: { raw },
+    });
   } catch (error) {
     console.error("Contact Email Service Error:", error);
     throw error;

@@ -47,12 +47,15 @@ router.post("/mentors", protect, adminOnly, async (req, res) => {
     }
 
     // 1. Create User record
+    // isVerified: true — mentors are registered by the admin directly,
+    // so email OTP verification is not needed. They can log in immediately.
     const user = await User.create({
       name,
       email,
       password, // Hook will handle hashing
       role: "mentor",
-      firstLogin: false, // Mentors don't necessarily need the "first login" flow like students
+      isVerified: true,
+      firstLogin: true, // Show first-login experience so mentor can set up their profile
       assessmentCompleted: true,
     });
 

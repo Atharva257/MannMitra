@@ -77,6 +77,8 @@ export default function Forum() {
     }
   };
 
+  const isLoggedIn = !!localStorage.getItem("token");
+
   return (
     <div className="max-w-4xl mx-auto mt-8 space-y-8 px-4">
       {/* Header */}
@@ -85,12 +87,21 @@ export default function Forum() {
           <h1 className="text-4xl font-black text-blue-800 dark:text-blue-100 italic">Peer Support Forum</h1>
           <p className="text-gray-500 dark:text-gray-400">Share your journey, support others, stay anonymous.</p>
         </div>
-        <button 
-          onClick={() => setShowNewPost(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition shadow-lg shadow-blue-200 dark:shadow-none active:scale-95"
-        >
-          <Plus size={20} /> Create Post
-        </button>
+        {isLoggedIn ? (
+          <button 
+            onClick={() => setShowNewPost(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition shadow-lg shadow-blue-200 dark:shadow-none active:scale-95"
+          >
+            <Plus size={20} /> Create Post
+          </button>
+        ) : (
+          <a
+            href="/login"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition shadow-lg shadow-blue-200 dark:shadow-none active:scale-95"
+          >
+            <User size={20} /> Login to Post
+          </a>
+        )}
       </div>
 
       {/* Filter Bar */}
@@ -183,10 +194,10 @@ export default function Forum() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-xl ${post.isAnonymous ? 'bg-slate-400' : 'bg-gradient-to-br from-blue-500 to-indigo-600'}`}>
-                    {post.isAnonymous ? <ShieldAlert size={24} /> : post.author.name[0]}
+                    {post.isAnonymous ? <ShieldAlert size={24} /> : (post.author?.name?.[0] ?? <User size={20} />)}
                   </div>
                   <div>
-                    <h3 className="font-black text-gray-800 dark:text-gray-100">{post.author.name}</h3>
+                    <h3 className="font-black text-gray-800 dark:text-gray-100">{post.author?.name ?? "Deleted User"}</h3>
                     <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest leading-none">{new Date(post.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
@@ -219,31 +230,33 @@ export default function Forum() {
                 {post.comments?.map((comment, i) => (
                   <div key={i} className="flex gap-3 bg-gray-50 dark:bg-slate-900/50 p-4 rounded-2xl">
                     <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">
-                      {comment.author.name[0]}
+                      {comment.author?.name?.[0] ?? "?"}
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">{comment.author.name}</p>
+                      <p className="text-xs font-bold text-gray-700 dark:text-gray-200 mb-1">{comment.author?.name ?? "Deleted User"}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">{comment.content}</p>
                     </div>
                   </div>
                 ))}
                 
-                {/* Add Comment Input */}
-                <div className="flex gap-2 mt-4">
-                  <input 
-                    type="text" 
-                    placeholder="Add a kind comment..."
-                    className="flex-1 bg-gray-100 dark:bg-slate-900 border-none rounded-xl p-3 text-sm focus:ring-1 ring-blue-500 dark:text-white"
-                    value={commentText[post._id] || ""}
-                    onChange={(e) => setCommentText({...commentText, [post._id]: e.target.value})}
-                  />
-                  <button 
-                    onClick={() => handleAddComment(post._id)}
-                    className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition shadow-md shadow-blue-100 dark:shadow-none"
-                  >
-                    <Send size={18} />
-                  </button>
-                </div>
+                {/* Add Comment Input — only shown if logged in */}
+                {isLoggedIn && (
+                  <div className="flex gap-2 mt-4">
+                    <input 
+                      type="text" 
+                      placeholder="Add a kind comment..."
+                      className="flex-1 bg-gray-100 dark:bg-slate-900 border-none rounded-xl p-3 text-sm focus:ring-1 ring-blue-500 dark:text-white"
+                      value={commentText[post._id] || ""}
+                      onChange={(e) => setCommentText({...commentText, [post._id]: e.target.value})}
+                    />
+                    <button 
+                      onClick={() => handleAddComment(post._id)}
+                      className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition shadow-md shadow-blue-100 dark:shadow-none"
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))

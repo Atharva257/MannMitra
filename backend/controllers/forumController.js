@@ -13,15 +13,23 @@ export const getPosts = async (req, res) => {
       .populate("comments.author", "name role")
       .sort({ createdAt: -1 });
 
-    // Sanitize anonymous authors before sending to frontend
+    // Sanitize authors before sending to frontend:
+    // - Replace anonymous authors with "Anonymous User"
+    // - Replace null authors (deleted accounts) with a safe fallback
     const sanitizedPosts = posts.map(post => {
       const p = post.toObject();
-      if (p.isAnonymous && p.author) {
+      if (p.isAnonymous) {
         p.author = { name: "Anonymous User" };
+      } else if (!p.author) {
+        p.author = { name: "Deleted User" };
       }
       if (p.comments) {
         p.comments = p.comments.map(c => {
-          if (c.isAnonymous && c.author) c.author = { name: "Anonymous User" };
+          if (c.isAnonymous) {
+            c.author = { name: "Anonymous User" };
+          } else if (!c.author) {
+            c.author = { name: "Deleted User" };
+          }
           return c;
         });
       }
